@@ -81,3 +81,24 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## GitHub Actions + Vercel Deployment
+
+This repository includes 2 workflows:
+
+- `.github/workflows/ci.yml`: runs lint, tests, and build on pull requests and pushes to `main`.
+- `.github/workflows/vercel-deploy.yml`: deploys preview on pull requests and production on pushes to `main`.
+
+### Required GitHub configuration
+
+In your GitHub repository, add these secrets:
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+Add this repository variable:
+
+- `VITE_API_URL` = `https://famfood6-backend.vercel.app/`
+
+After adding them, push to `main` or open a pull request to see the workflows running in the Actions tab.
