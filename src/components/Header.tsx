@@ -7,12 +7,13 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 const Header = () => {
   const {
     user, searchQuery, setSearchQuery, foodFilter, setFoodFilter,
-    cartCount, setShowAuthModal, logout, favorites,
+    cartCount, setShowAuthModal, logout, favorites, menuItems,
   } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
   const isAdminRoute = location.pathname.startsWith("/admin");
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const validFavoriteCount = favorites.filter((id) => menuItems.some((item) => item.id === id)).length;
 
   const cycleFoodFilter = () => {
     setFoodFilter((prev) => {
@@ -132,9 +133,9 @@ const Header = () => {
 
         <Link to="/favorites" className="relative rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <Heart className="h-5 w-5" />
-          {favorites.length > 0 && (
+          {validFavoriteCount > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-secondary-foreground">
-              {favorites.length}
+              {validFavoriteCount}
             </span>
           )}
         </Link>

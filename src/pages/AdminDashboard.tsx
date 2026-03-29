@@ -72,6 +72,7 @@ const OrderCard = ({ order, children }: { order: Order; children?: React.ReactNo
     ready: "bg-green-500/10 text-green-600",
     delivered: "bg-emerald-500/10 text-emerald-600",
     rejected: "bg-destructive/10 text-destructive",
+    cancelled: "bg-slate-500/15 text-slate-700",
   };
   return (
     <motion.div layout className="rounded-xl border bg-card p-4 shadow-card">
@@ -298,11 +299,11 @@ const LiveOrdersTab = ({
 // History Tab
 const HistoryTab = ({ orders }: { orders: Order[] }) => {
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "delivered" | "rejected">("all");
+  const [filter, setFilter] = useState<"all" | "delivered" | "rejected" | "cancelled">("all");
 
   const history = useMemo(() => {
     return orders
-      .filter((o) => ["delivered", "rejected"].includes(o.status))
+      .filter((o) => ["delivered", "rejected", "cancelled"].includes(o.status))
       .filter((o) => {
         if (filter !== "all" && o.status !== filter) return false;
         if (!search.trim()) return true;
@@ -318,13 +319,15 @@ const HistoryTab = ({ orders }: { orders: Order[] }) => {
 
   const deliveredCount = orders.filter((o) => o.status === "delivered").length;
   const rejectedCount = orders.filter((o) => o.status === "rejected").length;
+  const cancelledCount = orders.filter((o) => o.status === "cancelled").length;
   const totalRevenue = orders.filter((o) => o.status === "delivered").reduce((sum, o) => sum + o.total, 0);
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
         <StatCard icon={CheckCircle} label="Delivered" value={deliveredCount} accent />
         <StatCard icon={X} label="Rejected" value={rejectedCount} />
+        <StatCard icon={AlertCircle} label="Cancelled" value={cancelledCount} />
         <StatCard icon={TrendingUp} label="Total Revenue" value={`Rs ${totalRevenue}`} />
       </div>
 
@@ -338,7 +341,7 @@ const HistoryTab = ({ orders }: { orders: Order[] }) => {
           />
         </div>
         <div className="flex gap-1 rounded-lg bg-muted p-1">
-          {(["all", "delivered", "rejected"] as const).map((f) => (
+          {(["all", "delivered", "rejected", "cancelled"] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)} className={`rounded-md px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${filter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
               {f}
             </button>
