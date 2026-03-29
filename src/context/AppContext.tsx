@@ -33,15 +33,24 @@ export interface Order {
   order_number: string;
   user_id: string;
   total: number;
-  status: "pending" | "accepted" | "cooking" | "packing" | "ready" | "delivered" | "rejected";
+  status: "pending" | "accepted" | "cooking" | "packing" | "ready" | "delivered" | "rejected" | "cancelled";
   payment_method: "cash" | "online";
   prep_time: number | null;
   whatsapp_coupon: string;
   delivery_pin: string;
   customer_name: string;
   customer_phone: string;
+  customer_call_number?: string;
+  isFreeOrder?: boolean;
   created_at: string;
   items: { menu_item: MenuItem; quantity: number; price_at_order: number }[];
+}
+
+export interface OrderPlacementResult {
+  order: Order;
+  freeItemApplied: boolean;
+  freeItems: { name: string; quantity: number }[];
+  loyaltyProgress: { itemName: string; currentCount: number; ordersRemainingForFree: number }[];
 }
 
 // ─── Normalise backend → frontend ─────────────────────────────────────────────
@@ -79,8 +88,18 @@ function mapOrder(raw: any, menuCache: Map<string, MenuItem>): Order {
     prep_time: raw.estimatedPrepTime ?? null,
     whatsapp_coupon: "",
     delivery_pin: raw.deliveryPIN || "",
-    customer_name: "",
-    customer_phone: typeof raw.userId === "object" ? raw.userId?.mobileNumber || "" : "",
+    customer_name:
+      raw.customerName ||
+      (typeof raw.userId === "object" ? raw.userId?.profileDetails?.name || "" : ""),
+    customer_phone:
+      raw.customerPhone ||
+      (typeof raw.userId === "object" ? raw.userId?.mobileNumber || "" : ""),
+    customer_call_number:
+      raw.customerCallNumber ||
+      (typeof raw.userId === "object"
+        ? raw.userId?.profileDetails?.callNumber || raw.userId?.mobileNumber || ""
+        : ""),
+    isFreeOrder: Boolean(raw.isFreeOrder) || safeItems.some((item: any) => Number(item?.price) === 0),
     created_at: raw.createdAt,
     items: safeItems.flatMap((item: any) => {
       if (!item || typeof item !== "object") {
@@ -126,9 +145,16 @@ interface AppState {
 
 interface AppContextType extends AppState {
   sendOtp: (phone: string) => Promise<SendOtpResult>;
-  verifyOtp: (phone: string, token: string) => Promise<{ shouldSetupProfile: boolean }>;
+  verifyOtp: (phone: string, token: string) => Promise<{ shouldSetupProfile: boolean; shouldSetupPassword: boolean }>;
+  loginWithPassword: (phone: string, password: string) => Promise<void>;
+  setPassword: (password: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   logout: () => void;
   setUsername: (name: string) => Promise<void>;
+  setCallNumber: (callNumber: string) => Promise<void>;
+  requestPhoneChangeOtp: (newMobileNumber: string) => Promise<{ otp?: string }>;
+  verifyPhoneChangeOtp: (newMobileNumber: string, otp: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
   addToCart: (item: MenuItem) => void;
   removeFromCart: (itemId: string) => void;
   updateCartQuantity: (itemId: string, qty: number) => void;
@@ -138,7 +164,8 @@ interface AppContextType extends AppState {
   setSearchQuery: (q: string) => void;
   setShowAuthModal: (v: boolean) => void;
   setIsAdminView: (v: boolean) => void;
-  placeOrder: (paymentMethod: "cash" | "online") => Promise<Order>;
+  placeOrder: (paymentMethod: "cash" | "online") => Promise<OrderPlacementResult>;
+  cancelOrder: (orderId: string) => Promise<void>;
   updateOrderStatus: (orderId: string, status: Order["status"], prepTime?: number) => Promise<void>;
   addMenuItem: (item: Omit<MenuItem, "id" | "created_at" | "updated_at">) => Promise<void>;
   updateMenuItem: (item: MenuItem) => Promise<void>;
@@ -161,7 +188,21 @@ export const useApp = () => {
 // ─── Provider ──────────────────────────────────────────────────────────────────
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading: authLoading, sendOtp, verifyOtp, setUsername, logout } = useAuth();
+  const {
+    user,
+    loading: authLoading,
+    sendOtp,
+    verifyOtp,
+    loginWithPassword,
+    setPassword,
+    changePassword,
+    setUsername,
+    setCallNumber,
+    requestPhoneChangeOtp,
+    verifyPhoneChangeOtp,
+    loadProfile,
+    logout,
+  } = useAuth();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -287,7 +328,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [user]);
 
   // ── Orders ────────────────────────────────────────────────────────────────────
-  const placeOrder = useCallback(async (paymentMethod: "cash" | "online"): Promise<Order> => {
+  const placeOrder = useCallback(async (paymentMethod: "cash" | "online"): Promise<OrderPlacementResult> => {
     if (!user) throw new Error("Must be logged in");
 
     const data = await apiFetch('/api/orders', {
@@ -308,7 +349,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshOrders();
     apiFetch('/api/users/loyalty').then(d => { if (d?.loyaltyCounter) setLoyaltyMap(d.loyaltyCounter); }).catch(() => {});
 
-    return {
+    const placedOrder: Order = {
       id: data.orderId,
       order_number: data.tokenNumber,
       user_id: user.id,
@@ -320,10 +361,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       delivery_pin: data.deliveryPIN || "",
       customer_name: user.username || "",
       customer_phone: user.phone,
+      isFreeOrder: Boolean(data.freeItemApplied) || (Array.isArray(data.freeItems) && data.freeItems.length > 0),
       created_at: new Date().toISOString(),
       items: cart.map(c => ({ menu_item: c.item, quantity: c.quantity, price_at_order: c.item.price })),
     };
+
+    return {
+      order: placedOrder,
+      freeItemApplied: Boolean(data.freeItemApplied),
+      freeItems: Array.isArray(data.freeItems) ? data.freeItems : [],
+      loyaltyProgress: Array.isArray(data.loyaltyProgress) ? data.loyaltyProgress : [],
+    };
   }, [cart, user, refreshOrders]);
+
+  const cancelOrder = useCallback(async (orderId: string) => {
+    await apiFetch(`/api/orders/${orderId}/cancel`, {
+      method: 'PATCH',
+    });
+    await refreshOrders();
+  }, [refreshOrders]);
 
   const updateOrderStatus = useCallback(async (orderId: string, status: Order["status"], prepTime?: number) => {
     // Capitalise for backend enum: "accepted" → "Accepted"
@@ -395,10 +451,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         user, authLoading, cart, menuItems, orders, favorites, loyaltyMap,
         foodFilter, searchQuery, showAuthModal, isAdminView,
-        sendOtp, verifyOtp, logout, setUsername,
+        sendOtp,
+        verifyOtp,
+        loginWithPassword,
+        setPassword,
+        changePassword,
+        logout,
+        setUsername,
+        setCallNumber,
+        requestPhoneChangeOtp,
+        verifyPhoneChangeOtp,
+        refreshProfile: loadProfile,
         addToCart, removeFromCart, updateCartQuantity, clearCart,
         toggleFavorite, setFoodFilter, setSearchQuery, setShowAuthModal, setIsAdminView,
-        placeOrder, updateOrderStatus,
+        placeOrder, cancelOrder, updateOrderStatus,
         addMenuItem, updateMenuItem, deleteMenuItem,
         refreshOrders, refreshMenu,
         filteredItems, cartTotal, cartCount,

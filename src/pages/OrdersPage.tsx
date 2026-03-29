@@ -6,8 +6,8 @@ import { useNavigate } from "react-router-dom";
 const OrdersPage = () => {
   const { orders } = useApp();
   const navigate = useNavigate();
-  const activeOrders = orders.filter((o) => !["delivered", "rejected"].includes(o.status));
-  const pastOrders = orders.filter((o) => ["delivered", "rejected"].includes(o.status));
+  const activeOrders = orders.filter((o) => !["delivered", "rejected", "cancelled"].includes(o.status));
+  const pastOrders = orders.filter((o) => ["delivered", "rejected", "cancelled"].includes(o.status));
 
   return (
     <div className="container max-w-lg py-6">

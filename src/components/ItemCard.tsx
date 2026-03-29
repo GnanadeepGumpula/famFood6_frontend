@@ -1,6 +1,7 @@
-import { Heart, Plus, Minus, Gift } from "lucide-react";
+import { Heart, Plus, Minus, Gift, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import { useApp, MenuItem } from "@/context/AppContext";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ItemCard = ({ item, index }: { item: MenuItem; index: number }) => {
   const { addToCart, cart, updateCartQuantity, toggleFavorite, favorites, loyaltyMap } = useApp();
@@ -10,6 +11,7 @@ const ItemCard = ({ item, index }: { item: MenuItem; index: number }) => {
   const loyalty = loyaltyMap[item.name] || 0;
   const loyaltyMax = 5;
   const isFreeEligible = loyalty >= loyaltyMax;
+  const remainingForFree = Math.max(loyaltyMax - loyalty, 0);
 
   return (
     <motion.div
@@ -43,8 +45,29 @@ const ItemCard = ({ item, index }: { item: MenuItem; index: number }) => {
         <h3 className="font-display text-sm font-bold leading-tight">{item.name}</h3>
         <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{item.description}</p>
 
-        {loyalty > 0 && (
-          <div className="mt-2 flex items-center gap-1.5">
+        <div className="mt-2 rounded-md border bg-muted/20 px-2 py-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Free tracker</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="How loyalty tracker works"
+                    className="rounded-full p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[14rem] text-xs">
+                  Buy this item 5 times and your next one becomes free. We track this automatically per item.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <span className="text-[10px] font-semibold text-muted-foreground">{Math.min(loyalty, loyaltyMax)}/{loyaltyMax}</span>
+          </div>
+
+          <div className="mt-1.5 flex items-center gap-1.5">
             <div className="flex gap-0.5">
               {Array.from({ length: loyaltyMax }).map((_, i) => (
                 <div
@@ -53,9 +76,11 @@ const ItemCard = ({ item, index }: { item: MenuItem; index: number }) => {
                 />
               ))}
             </div>
-            <span className="text-[10px] font-semibold text-muted-foreground">{Math.min(loyalty, loyaltyMax)}/{loyaltyMax}</span>
+            <span className="text-[10px] text-muted-foreground">
+              {isFreeEligible ? "Free reward ready now" : `${remainingForFree} more to unlock free`}
+            </span>
           </div>
-        )}
+        </div>
 
         <div className="mt-2 flex items-center justify-between">
           <span className="font-display text-base font-black text-foreground">₹{item.price}</span>
@@ -63,10 +88,10 @@ const ItemCard = ({ item, index }: { item: MenuItem; index: number }) => {
           {isFreeEligible ? (
             <motion.button
               whileTap={{ scale: 0.95 }}
-              onClick={() => addToCart({ ...item, price: 0 })}
+              onClick={() => addToCart(item)}
               className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-primary to-secondary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-glow-primary"
             >
-              <Gift className="h-3.5 w-3.5" /> FREE!
+              <Gift className="h-3.5 w-3.5" /> CLAIM FREE
             </motion.button>
           ) : cartItem ? (
             <div className="flex items-center gap-1.5 rounded-lg border border-primary bg-primary/5 px-1">

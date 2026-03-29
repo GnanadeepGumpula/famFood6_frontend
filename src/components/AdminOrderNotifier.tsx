@@ -173,6 +173,14 @@ const AdminOrderNotifier = () => {
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {order.customer_name || "Customer"} • {order.customer_phone || "N/A"}
                 </p>
+                {(order.customer_call_number || order.customer_phone) && (
+                  <a
+                    href={`tel:${order.customer_call_number || order.customer_phone}`}
+                    className="mt-1 inline-flex rounded-md border border-primary/40 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary hover:text-primary-foreground"
+                  >
+                    Call to confirm order
+                  </a>
+                )}
                 <ul className="mt-2 space-y-1 border-t pt-2">
                   {safeItems.length === 0 && (
                     <li className="text-xs text-muted-foreground">No items available for this order.</li>
@@ -216,6 +224,15 @@ const AdminOrderNotifier = () => {
                   <XCircle className="h-4 w-4" /> Reject
                 </button>
               </div>
+
+              {(order.customer_call_number || order.customer_phone) && (
+                <a
+                  href={`tel:${order.customer_call_number || order.customer_phone}`}
+                  className="mt-3 flex w-full items-center justify-center rounded-lg border border-primary/50 py-2 text-xs font-bold text-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  Call Customer
+                </a>
+              )}
             </motion.div>
           </motion.div>
         )}

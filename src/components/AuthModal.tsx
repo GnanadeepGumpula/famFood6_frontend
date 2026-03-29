@@ -1,29 +1,65 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Phone, KeyRound, User as UserIcon } from "lucide-react";
+import { X, Phone, KeyRound, User as UserIcon, Lock } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
-type Step = "phone" | "otp" | "username";
+type Step = "password" | "otp" | "username" | "passwordSetup";
 
 const AuthModal = () => {
-  const { showAuthModal, setShowAuthModal, sendOtp, verifyOtp, setUsername: setUsernameFn } = useApp();
-  const [step, setStep] = useState<Step>("phone");
+  const {
+    showAuthModal,
+    setShowAuthModal,
+    sendOtp,
+    verifyOtp,
+    loginWithPassword,
+    setPassword: setPasswordFn,
+    setUsername: setUsernameFn,
+  } = useApp();
+  const [step, setStep] = useState<Step>("password");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [devOtp, setDevOtp] = useState("");
   const [username, setUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const autoVerifyTriggeredRef = useRef(false);
 
   const handleClose = () => {
     setShowAuthModal(false);
-    setStep("phone");
+    setStep("password");
     setPhone("");
+    setPassword("");
     setOtp("");
     setDevOtp("");
     setUsername("");
+    setNewPassword("");
+    setNeedsPasswordSetup(false);
     setError("");
+  };
+
+  const handlePasswordLogin = async () => {
+    if (phone.length < 10) {
+      setError("Enter a valid 10-digit number");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password should be at least 6 characters");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+    try {
+      await loginWithPassword(phone, password);
+      handleClose();
+    } catch (e: any) {
+      setError(e.message || "Password login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePhoneSubmit = async () => {
@@ -47,8 +83,11 @@ const AuthModal = () => {
     setLoading(true);
     try {
       const result = await verifyOtp(phone, otp);
+      setNeedsPasswordSetup(result.shouldSetupPassword);
       if (result.shouldSetupProfile) {
         setStep("username");
+      } else if (result.shouldSetupPassword) {
+        setStep("passwordSetup");
       } else {
         handleClose();
       }
@@ -63,7 +102,29 @@ const AuthModal = () => {
     if (username) {
       await setUsernameFn(username);
     }
+    if (needsPasswordSetup) {
+      setStep("passwordSetup");
+      return;
+    }
     handleClose();
+  };
+
+  const handlePasswordSetupSubmit = async () => {
+    if (newPassword.length < 6) {
+      setError("Password should be at least 6 characters");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+    try {
+      await setPasswordFn(newPassword);
+      handleClose();
+    } catch (e: any) {
+      setError(e.message || "Failed to save password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -113,7 +174,7 @@ const AuthModal = () => {
               </div>
             )}
 
-            {step === "phone" && (
+            {step === "password" && (
               <div className="space-y-4">
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted-foreground">Mobile Number</label>
@@ -130,13 +191,37 @@ const AuthModal = () => {
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">Password</label>
+                  <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="password"
+                      minLength={6}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="flex-1 bg-transparent py-3 text-sm outline-none"
+                    />
+                  </div>
+                </div>
                 <button
-                  onClick={handlePhoneSubmit}
+                  onClick={handlePasswordLogin}
                   disabled={loading}
                   className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground transition-all hover:shadow-glow-primary disabled:opacity-50"
                 >
-                  {loading ? "Sending..." : "Send OTP"}
+                  {loading ? "Signing in..." : "Login"}
                 </button>
+                <button
+                  onClick={handlePhoneSubmit}
+                  disabled={loading}
+                  className="w-full rounded-lg border py-3 text-sm font-bold text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+                >
+                  {loading ? "Please wait..." : "Use OTP instead"}
+                </button>
+                <p className="text-center text-[11px] text-muted-foreground">
+                  First-time users should use OTP once, then set password.
+                </p>
               </div>
             )}
 
@@ -186,6 +271,30 @@ const AuthModal = () => {
                   className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground hover:shadow-glow-primary"
                 >
                   {username ? "Save & Continue" : "Skip"}
+                </button>
+              </div>
+            )}
+
+            {step === "passwordSetup" && (
+              <div className="space-y-4">
+                <p className="text-xs text-muted-foreground">Set your password once. Next time you can login without OTP for about a month.</p>
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3">
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="password"
+                    minLength={6}
+                    placeholder="Set a password (min 6 chars)"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="flex-1 bg-transparent py-3 text-sm outline-none"
+                  />
+                </div>
+                <button
+                  onClick={handlePasswordSetupSubmit}
+                  disabled={loading || newPassword.length < 6}
+                  className="w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground hover:shadow-glow-primary disabled:opacity-50"
+                >
+                  {loading ? "Saving..." : "Save Password & Continue"}
                 </button>
               </div>
             )}

@@ -9,6 +9,9 @@ const CartPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "online">("cash");
   const [showPaymentSim, setShowPaymentSim] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState<string | null>(null);
+  const [placedFreeItems, setPlacedFreeItems] = useState<{ name: string; quantity: number }[]>([]);
+  const [placedLoyaltyProgress, setPlacedLoyaltyProgress] = useState<{ itemName: string; currentCount: number; ordersRemainingForFree: number }[]>([]);
+  const [wasFreeRewardOrder, setWasFreeRewardOrder] = useState(false);
   const [placing, setPlacing] = useState(false);
   const navigate = useNavigate();
 
@@ -19,12 +22,18 @@ const CartPage = () => {
       if (paymentMethod === "online") {
         setShowPaymentSim(true);
         await new Promise((r) => setTimeout(r, 2500));
-        const order = await placeOrder("online");
+        const result = await placeOrder("online");
         setShowPaymentSim(false);
-        setOrderPlaced(order.order_number);
+        setOrderPlaced(result.order.order_number);
+        setPlacedFreeItems(result.freeItems);
+        setPlacedLoyaltyProgress(result.loyaltyProgress);
+        setWasFreeRewardOrder(result.freeItemApplied);
       } else {
-        const order = await placeOrder("cash");
-        setOrderPlaced(order.order_number);
+        const result = await placeOrder("cash");
+        setOrderPlaced(result.order.order_number);
+        setPlacedFreeItems(result.freeItems);
+        setPlacedLoyaltyProgress(result.loyaltyProgress);
+        setWasFreeRewardOrder(result.freeItemApplied);
       }
     } catch (e) {
       console.error("Order failed:", e);
@@ -39,8 +48,36 @@ const CartPage = () => {
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
           <CheckCircle className="h-20 w-20 text-primary" />
         </motion.div>
-        <h2 className="mt-4 font-display text-2xl font-bold">Order Placed!</h2>
+        <h2 className="mt-4 font-display text-2xl font-bold">
+          {wasFreeRewardOrder ? "Congratulations! Your FREE reward order was placed." : "Order Placed!"}
+        </h2>
         <p className="mt-1 text-muted-foreground">Order #{orderPlaced}</p>
+
+        {placedFreeItems.length > 0 && (
+          <div className="mt-4 w-full max-w-md rounded-xl border border-primary/40 bg-primary/5 p-3 text-center">
+            <p className="text-xs font-bold uppercase tracking-wide text-primary">Free items included</p>
+            <p className="mt-1 text-sm text-foreground">
+              {placedFreeItems.map((item) => `${item.name} x${item.quantity}`).join(", ")}
+            </p>
+          </div>
+        )}
+
+        {placedLoyaltyProgress.length > 0 && (
+          <div className="mt-3 w-full max-w-md rounded-xl border bg-card p-3 text-left shadow-card">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Next free reward tracker</p>
+            <div className="mt-2 space-y-1.5">
+              {placedLoyaltyProgress.map((progress) => (
+                <p key={progress.itemName} className="text-sm">
+                  <span className="font-semibold">{progress.itemName}:</span>{" "}
+                  {progress.ordersRemainingForFree === 0
+                    ? "Free reward is ready on your next add."
+                    : `${progress.ordersRemainingForFree} more order(s) to unlock free reward.`}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mt-6 flex gap-3">
           <button onClick={() => navigate("/orders")} className="rounded-lg bg-primary px-6 py-2 text-sm font-bold text-primary-foreground">
             Track Order

@@ -84,6 +84,14 @@ const OrderCard = ({ order, children }: { order: Order; children?: React.ReactNo
             </span>
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground truncate">{order.customer_name} | {order.customer_phone}</p>
+          {(order.customer_call_number || order.customer_phone) && (
+            <a
+              href={`tel:${order.customer_call_number || order.customer_phone}`}
+              className="mt-1 inline-flex rounded-md border border-primary/30 px-2 py-0.5 text-[11px] font-semibold text-primary hover:bg-primary hover:text-primary-foreground"
+            >
+              Call Customer
+            </a>
+          )}
           <p className="mt-1 text-xs text-muted-foreground">{getOrderItemsSummary(order)}</p>
           <div className="mt-1.5 flex flex-wrap gap-2 text-xs">
             <span className="font-bold text-primary">Rs {order.total}</span>
@@ -238,12 +246,22 @@ const LiveOrdersTab = ({
               return (
                 <OrderCard key={order.id} order={order}>
                   {action && (
-                    <button
-                      onClick={() => action.next === "delivered" ? handleDelivered(order.id) : updateOrderStatus(order.id, action.next)}
-                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-xs font-bold text-primary-foreground hover:shadow-glow-primary transition-shadow"
-                    >
-                      <action.icon className="h-4 w-4" /> {action.label}
-                    </button>
+                    <div className="mt-3 space-y-2">
+                      <button
+                        onClick={() => action.next === "delivered" ? handleDelivered(order.id) : updateOrderStatus(order.id, action.next)}
+                        className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-xs font-bold text-primary-foreground hover:shadow-glow-primary transition-shadow"
+                      >
+                        <action.icon className="h-4 w-4" /> {action.label}
+                      </button>
+                      {order.status === "ready" && (order.customer_call_number || order.customer_phone) && (
+                        <a
+                          href={`tel:${order.customer_call_number || order.customer_phone}`}
+                          className="flex w-full items-center justify-center rounded-lg border border-primary/40 py-2 text-xs font-semibold text-primary hover:bg-primary hover:text-primary-foreground"
+                        >
+                          Call: Order Ready for Pickup
+                        </a>
+                      )}
+                    </div>
                   )}
                 </OrderCard>
               );

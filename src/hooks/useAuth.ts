@@ -5,6 +5,7 @@ export interface AppUser {
   id: string;
   phone: string;
   username?: string;
+  callNumber?: string;
   isAdmin: boolean;
 }
 
@@ -12,8 +13,13 @@ export interface SendOtpResult {
   otp?: string;
 }
 
+export interface ChangePhoneOtpResult {
+  otp?: string;
+}
+
 export interface VerifyOtpResult {
   shouldSetupProfile: boolean;
+  shouldSetupPassword: boolean;
 }
 
 export const useAuth = () => {
@@ -25,7 +31,13 @@ export const useAuth = () => {
     try {
       const data = await apiFetch('/api/users/profile');
       setUser(prev =>
-        prev ? { ...prev, username: data.profileDetails?.name || undefined } : null
+        prev
+          ? {
+              ...prev,
+              username: data.profileDetails?.name || undefined,
+              callNumber: data.profileDetails?.callNumber || prev.phone,
+            }
+          : null
       );
     } catch {
       clearToken();
@@ -41,7 +53,12 @@ export const useAuth = () => {
     if (!payload) { clearToken(); setLoading(false); return; }
 
     // Set user from token immediately so UI doesn't flash "logged out"
-    setUser({ id: payload.userId, phone: payload.mobileNumber, isAdmin: payload.role === 'admin' });
+    setUser({
+      id: payload.userId,
+      phone: payload.mobileNumber,
+      callNumber: payload.mobileNumber,
+      isAdmin: payload.role === 'admin',
+    });
 
     // Load username from profile
     loadProfile().finally(() => setLoading(false));
@@ -64,6 +81,7 @@ export const useAuth = () => {
     const userPhone = data.user.mobileNumber;
     const profileName = data.user.profileDetails?.name?.trim();
     const hasUsername = Boolean(profileName);
+    const hasPassword = Boolean(data.user.hasPassword);
     const setupPromptKey = `profile_setup_prompted_${userPhone}`;
     const alreadyPrompted = localStorage.getItem(setupPromptKey) === '1';
     const shouldSetupProfile = !hasUsername && !alreadyPrompted;
@@ -76,10 +94,40 @@ export const useAuth = () => {
       id: data.user.userId,
       phone: userPhone,
       username: hasUsername ? profileName : undefined,
+      callNumber: data.user.profileDetails?.callNumber || userPhone,
       isAdmin: payload?.role === 'admin',
     });
 
-    return { shouldSetupProfile };
+    return {
+      shouldSetupProfile,
+      shouldSetupPassword: !hasPassword,
+    };
+  };
+
+  const loginWithPassword = async (phone: string, password: string): Promise<void> => {
+    const data = await apiFetch('/api/auth/login-password', {
+      method: 'POST',
+      body: JSON.stringify({ mobileNumber: phone, password }),
+    });
+
+    setToken(data.token);
+    const payload = parseJwt(data.token);
+    const profileName = data.user.profileDetails?.name?.trim();
+
+    setUser({
+      id: data.user.userId,
+      phone: data.user.mobileNumber,
+      username: profileName || undefined,
+      callNumber: data.user.profileDetails?.callNumber || data.user.mobileNumber,
+      isAdmin: payload?.role === 'admin',
+    });
+  };
+
+  const setPassword = async (password: string): Promise<void> => {
+    await apiFetch('/api/auth/set-password', {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    });
   };
 
   const setUsername = async (name: string) => {
@@ -93,10 +141,63 @@ export const useAuth = () => {
     setUser(prev => (prev ? { ...prev, username: name } : null));
   };
 
+  const setCallNumber = async (callNumber: string) => {
+    await apiFetch('/api/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify({ profileDetails: { callNumber } }),
+    });
+    setUser(prev => (prev ? { ...prev, callNumber } : null));
+  };
+
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+    await apiFetch('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  };
+
+  const requestPhoneChangeOtp = async (newMobileNumber: string): Promise<ChangePhoneOtpResult> => {
+    return await apiFetch('/api/users/profile/phone-change/request-otp', {
+      method: 'POST',
+      body: JSON.stringify({ newMobileNumber }),
+    });
+  };
+
+  const verifyPhoneChangeOtp = async (newMobileNumber: string, otp: string): Promise<void> => {
+    const data = await apiFetch('/api/users/profile/phone-change/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ newMobileNumber, otp }),
+    });
+
+    setToken(data.token);
+    const payload = parseJwt(data.token);
+    setUser((prev) => ({
+      id: data.user.userId,
+      phone: data.user.mobileNumber,
+      username: data.user.profileDetails?.name || prev?.username,
+      callNumber: data.user.profileDetails?.callNumber || prev?.callNumber || data.user.mobileNumber,
+      isAdmin: payload?.role === 'admin',
+    }));
+  };
+
   const logout = () => {
     clearToken();
     setUser(null);
   };
 
-  return { user, loading, sendOtp, verifyOtp, setUsername, logout };
+  return {
+    user,
+    loading,
+    sendOtp,
+    verifyOtp,
+    loginWithPassword,
+    setPassword,
+    changePassword,
+    setUsername,
+    setCallNumber,
+    requestPhoneChangeOtp,
+    verifyPhoneChangeOtp,
+    loadProfile,
+    logout,
+  };
 };
