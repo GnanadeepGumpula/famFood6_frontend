@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 150 20% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 150 20% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 20% 10%;
+
+    --primary: 100 53% 34%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 10 73% 48%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 100 10% 94%;
+    --muted-foreground: 100 5% 45%;
+
+    --accent: 40 100% 96%;
+    --accent-foreground: 10 73% 48%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 100 10% 88%;
+    --input: 100 10% 88%;
+    --ring: 100 53% 34%;
+
+    --radius: 0.75rem;
+
+    --veg: 120 60% 40%;
+    --nonveg: 0 70% 50%;
+
+    --font-display: 'Nunito', sans-serif;
+    --font-body: 'Poppins', sans-serif;
+
+    --shadow-card: 0 2px 12px -2px hsl(100 20% 20% / 0.08);
+    --shadow-elevated: 0 8px 30px -8px hsl(100 20% 20% / 0.15);
+    --shadow-glow-primary: 0 4px 20px -4px hsl(100 53% 34% / 0.3);
+    --shadow-glow-secondary: 0 4px 20px -4px hsl(10 73% 48% / 0.3);
+
+    --watermark-opacity: 0.15;
+    --watermark-size: min(72vw, 560px);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  #root {
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    min-height: 100vh;
+    position: relative;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url('/famFood6_Logo_nobg.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: var(--watermark-size);
+    opacity: var(--watermark-opacity);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-body {
+    font-family: var(--font-body);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
+  .shadow-glow-primary {
+    box-shadow: var(--shadow-glow-primary);
+  }
+  .shadow-glow-secondary {
+    box-shadow: var(--shadow-glow-secondary);
+  }
+  .veg-badge {
+    @apply inline-flex items-center justify-center w-4 h-4 border-2 rounded-sm;
+    border-color: hsl(var(--veg));
+  }
+  .veg-badge::after {
+    content: '';
+    @apply w-2 h-2 rounded-full;
+    background: hsl(var(--veg));
+  }
+  .nonveg-badge {
+    @apply inline-flex items-center justify-center w-4 h-4 border-2 rounded-sm;
+    border-color: hsl(var(--nonveg));
+  }
+  .nonveg-badge::after {
+    content: '';
+    @apply w-2 h-2 rounded-full;
+    background: hsl(var(--nonveg));
+  }
+}
