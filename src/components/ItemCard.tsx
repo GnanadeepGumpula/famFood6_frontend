@@ -80,6 +80,10 @@ const ItemCard = ({ item, index }: { item: MenuItem; index: number }) => {
               {isFreeEligible ? "Free reward ready now" : `${remainingForFree} more to unlock free`}
             </span>
           </div>
+
+          <p className="mt-1.5 rounded bg-primary/10 px-1.5 py-1 text-[10px] font-semibold leading-tight text-primary sm:text-[11px]">
+            famFood6 reward: every 6th order of this same product is FREE.
+          </p>
         </div>
 
         <div className="mt-2 flex items-center justify-between">

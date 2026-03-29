@@ -268,6 +268,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!user || menuItems.length === 0) return;
+
+    setFavorites((prev) => {
+      const validIds = new Set(menuItems.map((item) => item.id));
+      const cleaned = prev.filter((id) => validIds.has(id));
+      if (cleaned.length !== prev.length) {
+        localStorage.setItem('favorites', JSON.stringify(cleaned));
+      }
+      return cleaned;
+    });
+  }, [user, menuItems]);
+
   // ── Loyalty ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) { setLoyaltyMap({}); return; }
