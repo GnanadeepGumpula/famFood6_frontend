@@ -20,13 +20,17 @@ const playNotification = () => {
   } catch {}
 };
 
-const showBrowserNotification = (order: Order) => {
+const showBrowserNotification = (
+  order: Order,
+  title = "New Order Received",
+  bodyPrefix = ""
+) => {
   if (typeof window === "undefined" || !("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
 
   try {
-    const notification = new Notification("New Order Received", {
-      body: `#${order.order_number} | ${order.customer_phone || "Customer"} | Rs ${order.total}`,
+    const notification = new Notification(title, {
+      body: `${bodyPrefix}#${order.order_number} | ${order.customer_phone || "Customer"} | Rs ${order.total}`,
       icon: "/famFood6_Logo_nobg.png",
       tag: `order-${order.id}`,
     });
@@ -45,10 +49,12 @@ const showBrowserNotification = (order: Order) => {
 const AdminOrderNotifier = () => {
   const { user, orders, updateOrderStatus } = useApp();
   const [pendingPopups, setPendingPopups] = useState<Order[]>([]);
+  const [cancelledPopups, setCancelledPopups] = useState<Order[]>([]);
   const [prepTimeInput, setPrepTimeInput] = useState("20");
 
   const hasInitializedRef = useRef(false);
   const seenIdsRef = useRef<Set<string>>(new Set());
+  const statusSnapshotRef = useRef<Map<string, Order["status"]>>(new Map());
 
   const mergeQueue = (prev: Order[], incoming: Order[]) => {
     const byId = new Map<string, Order>();
@@ -65,8 +71,10 @@ const AdminOrderNotifier = () => {
   useEffect(() => {
     if (!user?.isAdmin) {
       setPendingPopups([]);
+      setCancelledPopups([]);
       hasInitializedRef.current = false;
       seenIdsRef.current = new Set();
+      statusSnapshotRef.current = new Map();
     }
   }, [user?.isAdmin]);
 
@@ -83,6 +91,29 @@ const AdminOrderNotifier = () => {
   useEffect(() => {
     if (!user?.isAdmin) return;
 
+    const previousSnapshot = statusSnapshotRef.current;
+    const newlyCancelled = orders.filter((order) => {
+      if (!order?.id || order.status !== "cancelled") return false;
+      const previousStatus = previousSnapshot.get(order.id);
+      return previousStatus !== undefined && previousStatus !== "cancelled";
+    });
+
+    if (newlyCancelled.length > 0) {
+      playNotification();
+      if (typeof document !== "undefined" && document.hidden) {
+        newlyCancelled.forEach((order) =>
+          showBrowserNotification(order, "Order Cancelled", "Cancelled: ")
+        );
+      }
+      setCancelledPopups((prev) => mergeQueue(prev, newlyCancelled));
+    }
+
+    const nextSnapshot = new Map<string, Order["status"]>();
+    for (const order of orders) {
+      if (order?.id) nextSnapshot.set(order.id, order.status);
+    }
+    statusSnapshotRef.current = nextSnapshot;
+
     const pendingOrders = orders.filter((o) => o?.status === "pending" && typeof o.id === "string");
     const pendingIds = new Set(pendingOrders.map((o) => o.id));
 
@@ -96,7 +127,7 @@ const AdminOrderNotifier = () => {
       if (pendingOrders.length > 0) {
         playNotification();
         if (typeof document !== "undefined" && document.hidden) {
-          pendingOrders.forEach((order) => showBrowserNotification(order));
+          pendingOrders.forEach((order) => showBrowserNotification(order, "New Order Received"));
         }
       }
 
@@ -110,7 +141,7 @@ const AdminOrderNotifier = () => {
       newOnes.forEach((o) => seenIdsRef.current.add(o.id));
       playNotification();
       if (typeof document !== "undefined" && document.hidden) {
-        newOnes.forEach((order) => showBrowserNotification(order));
+        newOnes.forEach((order) => showBrowserNotification(order, "New Order Received"));
       }
       setPendingPopups((prev) => mergeQueue(prev, newOnes));
     }
@@ -118,12 +149,13 @@ const AdminOrderNotifier = () => {
 
   // Don't render the popup on admin page itself – AdminDashboard handles actions there
   // Actually render everywhere: admin needs notification even on home page
-  if (!user?.isAdmin || pendingPopups.length === 0) return null;
+  if (!user?.isAdmin || (pendingPopups.length === 0 && cancelledPopups.length === 0)) return null;
 
   const order = pendingPopups.find((o) => o && typeof o.id === "string");
-  if (!order) return null;
-  const safeItems = (Array.isArray(order.items) ? order.items : []).filter(
-    (item): item is NonNullable<(typeof order.items)[number]> => Boolean(item && typeof item === "object")
+  const cancelledOrder = cancelledPopups.find((o) => o && typeof o.id === "string");
+  if (!order && !cancelledOrder) return null;
+  const safeItems = (Array.isArray(order?.items) ? order.items : []).filter(
+    (item) => Boolean(item && typeof item === "object")
   );
 
   const handleAccept = async (orderId: string) => {
@@ -137,11 +169,15 @@ const AdminOrderNotifier = () => {
     setPendingPopups((prev) => prev.filter((p) => p.id !== orderId));
   };
 
+  const dismissCancelledPopup = (orderId: string) => {
+    setCancelledPopups((prev) => prev.filter((o) => o.id !== orderId));
+  };
+
   return (
     <>
       {/* New order popup */}
       <AnimatePresence>
-        {pendingPopups.length > 0 && (
+        {order && (
           <motion.div
             className="fixed inset-0 z-[90] flex items-center justify-center bg-foreground/50 backdrop-blur-sm p-4"
             initial={{ opacity: 0 }}
@@ -233,6 +269,48 @@ const AdminOrderNotifier = () => {
                   Call Customer
                 </a>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Cancelled order popup */}
+      <AnimatePresence>
+        {!order && cancelledOrder && (
+          <motion.div
+            className="fixed inset-0 z-[90] flex items-center justify-center bg-foreground/50 backdrop-blur-sm p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="w-full max-w-md rounded-2xl bg-card p-6 shadow-elevated"
+              initial={{ scale: 0.8, y: 50 }}
+              animate={{ scale: 1, y: 0 }}
+            >
+              <div className="mb-4 flex items-center gap-2">
+                <XCircle className="h-6 w-6 text-destructive" />
+                <h2 className="font-display text-xl font-bold">Order Cancelled</h2>
+              </div>
+
+              <div className="rounded-xl bg-muted/50 p-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-base">#{cancelledOrder.order_number}</p>
+                  <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
+                    Cancelled
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {cancelledOrder.customer_name || "Customer"} • {cancelledOrder.customer_phone || "N/A"}
+                </p>
+              </div>
+
+              <button
+                onClick={() => dismissCancelledPopup(cancelledOrder.id)}
+                className="mt-4 w-full rounded-lg border py-3 text-sm font-bold text-foreground"
+              >
+                Dismiss
+              </button>
             </motion.div>
           </motion.div>
         )}
