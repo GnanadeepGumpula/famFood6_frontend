@@ -45,7 +45,7 @@ const AppLoader = ({ onComplete }: { onComplete: () => void }) => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
           >
-            Homemade goodness, delivered fresh
+            Homemade goodness, packed for takeaway
           </motion.p>
           <motion.div
             className="mt-8 h-1 w-48 overflow-hidden rounded-full bg-muted"

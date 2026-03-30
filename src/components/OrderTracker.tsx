@@ -214,7 +214,7 @@ const OrderTracker = ({ order }: { order: Order }) => {
             <span className="ml-1 font-bold text-primary">{order.whatsapp_coupon || "-"}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Delivery PIN:</span>
+            <span className="text-muted-foreground">Pickup PIN:</span>
             <span className="ml-1 font-bold text-secondary">{order.delivery_pin || "-"}</span>
           </div>
           {order.prep_time && (

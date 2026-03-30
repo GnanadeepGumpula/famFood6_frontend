@@ -183,16 +183,16 @@ const LiveOrdersTab = ({
     accepted: { next: "cooking", label: "Start Cooking", icon: ChefHat },
     cooking: { next: "packing", label: "Cooking Done", icon: Package },
     packing: { next: "ready", label: "Packing Done", icon: Truck },
-    ready: { next: "delivered", label: "Mark Delivered", icon: CheckCircle },
+    ready: { next: "delivered", label: "Mark Picked Up", icon: CheckCircle },
   };
 
-  const handleDelivered = (orderId: string) => {
+  const handlePickupComplete = (orderId: string) => {
     setPinOrderId(orderId);
     setPinInput("");
     setPinError("");
   };
 
-  const confirmDelivery = async () => {
+  const confirmPickup = async () => {
     const order = orders.find((o) => o.id === pinOrderId);
     if (order && pinInput === order.delivery_pin) {
       await updateOrderStatus(pinOrderId!, "delivered");
@@ -204,7 +204,7 @@ const LiveOrdersTab = ({
 
   useEffect(() => {
     if (!pinOrderId || pinInput.length !== 4) return;
-    void confirmDelivery();
+    void confirmPickup();
   }, [pinInput, pinOrderId]);
 
   return (
@@ -249,7 +249,7 @@ const LiveOrdersTab = ({
                   {action && (
                     <div className="mt-3 space-y-2">
                       <button
-                        onClick={() => action.next === "delivered" ? handleDelivered(order.id) : updateOrderStatus(order.id, action.next)}
+                        onClick={() => action.next === "delivered" ? handlePickupComplete(order.id) : updateOrderStatus(order.id, action.next)}
                         className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-xs font-bold text-primary-foreground hover:shadow-glow-primary transition-shadow"
                       >
                         <action.icon className="h-4 w-4" /> {action.label}
@@ -271,13 +271,13 @@ const LiveOrdersTab = ({
         )}
       </div>
 
-      {/* Delivery PIN modal */}
+      {/* Pickup PIN modal */}
       <AnimatePresence>
         {pinOrderId && (
           <motion.div className="fixed inset-0 z-[85] flex items-center justify-center bg-foreground/50 backdrop-blur-sm p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div className="w-full max-w-xs rounded-2xl bg-card p-6 shadow-elevated text-center" initial={{ scale: 0.8 }} animate={{ scale: 1 }}>
-              <h3 className="font-display text-lg font-bold">Enter Delivery PIN</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Ask the customer for their 4-digit PIN. It auto-verifies after 4 digits.</p>
+              <h3 className="font-display text-lg font-bold">Enter Pickup PIN</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Ask the customer for their 4-digit pickup PIN. It auto-verifies after 4 digits.</p>
               {pinError && <p className="mt-2 text-xs font-semibold text-destructive">{pinError}</p>}
               <input
                 type="text" maxLength={4} value={pinInput}
@@ -286,7 +286,7 @@ const LiveOrdersTab = ({
               />
               <div className="mt-4 flex gap-3">
                 <button onClick={() => setPinOrderId(null)} className="flex-1 rounded-lg border py-2 text-sm font-semibold">Cancel</button>
-                <button onClick={confirmDelivery} className="flex-1 rounded-lg bg-primary py-2 text-sm font-bold text-primary-foreground">Confirm</button>
+                <button onClick={confirmPickup} className="flex-1 rounded-lg bg-primary py-2 text-sm font-bold text-primary-foreground">Confirm</button>
               </div>
             </motion.div>
           </motion.div>
@@ -325,7 +325,7 @@ const HistoryTab = ({ orders }: { orders: Order[] }) => {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-        <StatCard icon={CheckCircle} label="Delivered" value={deliveredCount} accent />
+        <StatCard icon={CheckCircle} label="Picked Up" value={deliveredCount} accent />
         <StatCard icon={X} label="Rejected" value={rejectedCount} />
         <StatCard icon={AlertCircle} label="Cancelled" value={cancelledCount} />
         <StatCard icon={TrendingUp} label="Total Revenue" value={`Rs ${totalRevenue}`} />

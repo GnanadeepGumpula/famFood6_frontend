@@ -87,7 +87,7 @@ const Index = () => {
             Homemade with ❤️
           </h1>
           <p className="mt-1 text-sm text-primary-foreground/80 md:text-base">
-            Fresh family recipes delivered to your door
+            Fresh family recipes ready for takeaway pickup
           </p>
         </motion.div>
 

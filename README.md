@@ -1,104 +1,38 @@
-# Welcome to your Lovable project
+# famFood6 Frontend
 
-## Backend URL configuration
+Customer-facing frontend for famFood6 takeaway ordering.
 
-Set your backend URL in frontend `.env`:
+## Environment
+
+Create `.env` in this folder with:
 
 ```env
 VITE_API_URL=https://famfood6-backend.vercel.app/
 ```
 
-This works for both local development and production builds, as long as the backend CORS policy allows your frontend origin.
-
-## Project info
-
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Run locally
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Build
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+npm run build
+npm run preview
+```
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
+## Stack
 
 - Vite
-- TypeScript
-- React
-- shadcn-ui
+- React + TypeScript
 - Tailwind CSS
+- framer-motion
+- React Query
 
-## How can I deploy this project?
+## Notes
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
-
-## GitHub Actions + Vercel Deployment
-
-This repository includes 2 workflows:
-
-- `.github/workflows/ci.yml`: runs lint, tests, and build on pull requests and pushes to `main`.
-- `.github/workflows/vercel-deploy.yml`: deploys preview on pull requests and production on pushes to `main`.
-
-### Required GitHub configuration
-
-In your GitHub repository, add these secrets:
-
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
-
-Add this repository variable:
-
-- `VITE_API_URL` = `https://famfood6-backend.vercel.app/`
-
-After adding them, push to `main` or open a pull request to see the workflows running in the Actions tab.
+- Branding uses famFood6 assets from `public/`.
+- Order flow messaging is takeaway/pickup oriented.

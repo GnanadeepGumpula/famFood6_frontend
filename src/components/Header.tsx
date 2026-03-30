@@ -42,7 +42,8 @@ const Header = () => {
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
         <div className="container flex items-center gap-2 py-3 md:gap-4">
-        <Link to="/" className="mr-1 flex-shrink-0 font-display text-xl font-black tracking-tight md:text-2xl">
+        <Link to="/" className="mr-1 flex items-center gap-2 flex-shrink-0 font-display text-xl font-black tracking-tight md:text-2xl">
+          <img src="/famFood6_Logo_nobg.png" alt="famFood6 logo" className="h-8 w-8 rounded-full object-cover" />
           <span className="text-primary">fam</span>
           <span className="text-secondary">Food</span>
           <span className="text-primary">6</span>
